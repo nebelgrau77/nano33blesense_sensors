@@ -28,6 +28,8 @@ use embedded_graphics::{
 use arrayvec::ArrayString;
 use core::fmt;
 
+use core::ptr;
+
 use shared_bus;
 
 use nb::block;
@@ -46,7 +48,31 @@ fn main() -> ! {
     
     let mut led = port0.p0_13.into_push_pull_output(Level::Low);
 
-    let mut apds_pwr = port0.p0_20.into_push_pull_output(Level::High);
+    let mut apds_pwr = port0.p0_20.into_push_pull_output(Level::Low);
+
+
+    unsafe {
+        
+        const GPIO_PIN_CNF20: u32 = 0x50000000 + 0x750;
+        const GPIO_OUTSET: u32 = 0x50000000 + 0x508;
+
+        let x = ptr::read_volatile(GPIO_PIN_CNF20 as *mut u32);
+
+        ptr::write_volatile(GPIO_PIN_CNF20 as *mut u32, x | (3 << 8)); // set DRIVE to H0H1
+        ptr::write_volatile(GPIO_OUTSET as *mut u32, 1 << 20); // turn pin ON
+        
+    }
+
+    // set up delay provider
+    let mut delay = Delay::new(core.SYST);
+
+    // check if apds_pwr is on
+    if apds_pwr.is_set_high().unwrap() {
+        led.set_high().unwrap();
+        delay.delay_ms(1000_u32);
+        led.set_low().unwrap();
+    }
+
 
     // define I2C pins
     let scl = port0.p0_02.into_floating_input().degrade(); // clock
@@ -65,12 +91,7 @@ fn main() -> ! {
         scl: scl1,
         sda: sda1
     };    
-
-    // set up delay provider
-    let mut delay = Delay::new(core.SYST);
     
-    //apds_pwr.set_high().unwrap();
-
     // wait for just a moment
     delay.delay_ms(BOOT_DELAY_MS);
     
@@ -89,10 +110,9 @@ fn main() -> ! {
     disp.init().unwrap();
     disp.flush().unwrap();
 
-    led.set_high().unwrap();
+    led.set_high().unwrap(); // LED on after I2C got set up correctly
 
-    // initialize sensor
-    //let mut sensor = Apds9960::new(manager.acquire());
+    // initialize sensor    
     let mut sensor = Apds9960::new(i2c1);
     sensor.enable().unwrap();
     sensor.enable_light().unwrap();
@@ -107,10 +127,8 @@ fn main() -> ! {
                 disp.set_pixel(m, n, 0);
             }
         }
-
-        //let prox = sensor.read_proximity().unwrap();
+        
         let light = block!(sensor.read_light()).unwrap();
-
 
         let text_style = TextStyleBuilder::new(Font6x12).text_color(BinaryColor::On).build();
 
