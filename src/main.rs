@@ -19,7 +19,7 @@ use cortex_m_rt::entry;
 use ssd1306::{prelude::*, Builder, I2CDIBuilder};
 
 use embedded_graphics::{
-    fonts::{Font6x12, Text},
+    fonts::{Font8x16, Text},
     pixelcolor::BinaryColor,
     prelude::*,
     style::TextStyleBuilder,
@@ -27,8 +27,6 @@ use embedded_graphics::{
 
 use arrayvec::ArrayString;
 use core::fmt;
-
-use core::ptr;
 
 use shared_bus;
 
@@ -45,33 +43,17 @@ fn main() -> ! {
     let core = CorePeripherals::take().unwrap();
 
     let port0 = hal::gpio::p0::Parts::new(p.P0);
-    
+    let port1 = hal::gpio::p1::Parts::new(p.P1);
+
     let mut led = port0.p0_13.into_push_pull_output(Level::Low);
 
-    let mut apds_pwr = port0.p0_20.into_push_pull_output(Level::Low);
+    let mut _apds_pwr = port0.p0_20.into_push_pull_output(Level::High);
+    let _vdd_env = port0.p0_22.into_push_pull_output(Level::High); // powers the HTS221 sensor, as per board schematics
+    let _r_pullup = port1.p1_00.into_push_pull_output(Level::High); // necessary for SDA1 and SCL1 to work, as per board schematics
 
-
-    unsafe {
-        
-        const GPIO_PIN_CNF20: u32 = 0x50000000 + 0x750;
-        const GPIO_OUTSET: u32 = 0x50000000 + 0x508;
-
-        let x = ptr::read_volatile(GPIO_PIN_CNF20 as *mut u32);
-
-        ptr::write_volatile(GPIO_PIN_CNF20 as *mut u32, x | (3 << 8)); // set DRIVE to H0H1
-        ptr::write_volatile(GPIO_OUTSET as *mut u32, 1 << 20); // turn pin ON
-        
-    }
 
     // set up delay provider
     let mut delay = Delay::new(core.SYST);
-
-    // check if apds_pwr is on
-    if apds_pwr.is_set_high().unwrap() {
-        led.set_high().unwrap();
-        delay.delay_ms(1000_u32);
-        led.set_low().unwrap();
-    }
 
 
     // define I2C pins
@@ -110,33 +92,45 @@ fn main() -> ! {
     disp.init().unwrap();
     disp.flush().unwrap();
 
-    led.set_high().unwrap(); // LED on after I2C got set up correctly
+    //led.set_high().unwrap(); // LED on after I2C got set up correctly
 
     // initialize sensor    
     let mut sensor = Apds9960::new(i2c1);
     sensor.enable().unwrap();
     sensor.enable_light().unwrap();
 
-    led.set_low().unwrap(); // if LED goes off, the sensor got initialized
+    //led.set_low().unwrap(); // if LED goes off, the sensor got initialized
 
 
     loop {       
 
-        for m in 0..128 {
-            for n in 0..12 {
+        for m in 0..64 {
+            for n in 0..64 {
                 disp.set_pixel(m, n, 0);
             }
         }
         
         let light = block!(sensor.read_light()).unwrap();
 
-        let text_style = TextStyleBuilder::new(Font6x12).text_color(BinaryColor::On).build();
+        let text_style = TextStyleBuilder::new(Font8x16).text_color(BinaryColor::On).build();
 
-        let mut buf = ArrayString::<[u8; 16]>::new();
+        let mut c_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut r_buf = ArrayString::<[u8; 16]>::new();
+        let mut g_buf = ArrayString::<[u8; 16]>::new();
+        let mut b_buf = ArrayString::<[u8; 16]>::new();
 
-        val_display(&mut buf, light.clear, "C");
+        val_display(&mut c_buf, light.clear, "C");
+        Text::new(c_buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
 
-        Text::new(buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
+        val_display(&mut r_buf, light.red, "R");
+        Text::new(r_buf.as_str(), Point::new(0, 16)).into_styled(text_style).draw(&mut disp).unwrap();
+
+        val_display(&mut g_buf, light.green, "G");
+        Text::new(g_buf.as_str(), Point::new(0, 32)).into_styled(text_style).draw(&mut disp).unwrap();
+
+        val_display(&mut b_buf, light.blue, "B");
+        Text::new(b_buf.as_str(), Point::new(0, 48)).into_styled(text_style).draw(&mut disp).unwrap();
+
 
         disp.flush().unwrap();
 

@@ -1,8 +1,15 @@
-### APDS9960 temperature read and displayed to SSD1306 OLED - WIP
+### APDS9960 RGB + clear light read and displayed to SSD1306 OLED
 
 Ported to Arduino 33 BLESense board (https://store.arduino.cc/arduino-nano-33-ble-sense). 
 
-__Not working, hangs up on initializing the sensor. May need increasing the output drive on VDD_ENV pin.__
+According to the schematics (https://content.arduino.cc/assets/NANO33BLE_V2.0_sch.pdf) the APDS9660 sensor is powered from the VDD line, but it won't start without turning on the pin P0.22 (VDD_ENV). \ 
+Also pin P0.20 (APDS_PWR) has to be set HIGH. \
+Pin P1.00 also has to be set HIGH, as it is connected to R_PULLUP for the SDA1/SCL1 signals. 
+
+_TO DO_:
+* refresh sensor readings with an interrupt or with RTIC, not in a busy loop
+* test other sensor features, such as gestures recognition
+* use built-in RGB LED as output for the color readings
 
 #### HOW TO FLASH:
 
