@@ -1,5 +1,3 @@
-// doesn't work, hangs up on initializing sensor
-
 #![no_main]
 #![no_std]
 
@@ -19,7 +17,7 @@ use cortex_m_rt::entry;
 use ssd1306::{prelude::*, Builder, I2CDIBuilder};
 
 use embedded_graphics::{
-    fonts::{Font6x12, Text},
+    fonts::{Font8x16, Text},
     pixelcolor::BinaryColor,
     prelude::*,
     style::TextStyleBuilder,
@@ -42,26 +40,17 @@ fn main() -> ! {
     let core = CorePeripherals::take().unwrap();
 
     let port0 = hal::gpio::p0::Parts::new(p.P0);
+    let port1 = hal::gpio::p1::Parts::new(p.P1);
     
     let mut led = port0.p0_13.into_push_pull_output(Level::Low);
-
-    let _vdd_env = port0.p0_22.into_push_pull_output(Level::High);
-
-    /*
-
-    NOT SURE HOW TO CHANGE DRIVE LEVEL OF A SINGLE PIN, THIS WON'T WORK:
-
-    let mut vdd_env = port0.p0_22.conf().write(|w| {
-        w.dir().output();
-        w.input().connect();I
-        w.pull().disabled();
-        w.drive().h0h1();
-        w.sense().disabled();
-        w
-    });
-
-    */
-
+    
+    let _vdd_env = port0.p0_22.into_push_pull_output(Level::High); // powers the HTS221 sensor, as per board schematics
+    
+    let _r_pullup = port1.p1_00.into_push_pull_output(Level::High); // necessary for SDA1 and SCL1 to work, as per board schematics
+    
+    // set up delay provider
+    let mut delay = Delay::new(core.SYST);
+    
     // define I2C0 pins 
     let scl = port0.p0_02.into_floating_input().degrade(); // clock
     let sda = port0.p0_31.into_floating_input().degrade(); // data
@@ -80,11 +69,6 @@ fn main() -> ! {
         sda: sda1
     };    
 
-    // set up delay provider
-    let mut delay = Delay::new(core.SYST);
-    
-    led.set_high().unwrap();
-
     // wait for just a moment
     delay.delay_ms(BOOT_DELAY_MS);
     
@@ -101,6 +85,10 @@ fn main() -> ! {
     disp.init().unwrap();
     disp.flush().unwrap();
 
+    delay.delay_ms(1000_u32);
+
+    led.set_high().unwrap();
+
     // initialize sensor
     let mut hts221 = hts221::Builder::new()                
     .with_default_7bit_address()
@@ -108,13 +96,11 @@ fn main() -> ! {
     .with_avg_h(hts221::AvgH::Avg512)    
     .build(&mut i2c1).unwrap();
 
-    led.set_low().unwrap(); // if LED goes off, sensor got correctly initialized
-
     loop {       
 
         // clean up the digits
-        for m in 0..128 {
-            for n in 0..12 {
+        for m in 0..64 {
+            for n in 0..36 {
                 disp.set_pixel(m, n, 0);
             }
         }
@@ -122,13 +108,21 @@ fn main() -> ! {
         let temperature_x8 = hts221.temperature_x8(&mut i2c1).unwrap();
         let temp = temperature_x8 / 8;
 
-        let text_style = TextStyleBuilder::new(Font6x12).text_color(BinaryColor::On).build();
+        let humidity_x2 = hts221.humidity_x2(&mut i2c1).unwrap();
+        let hum = humidity_x2 / 2;
 
-        let mut buf = ArrayString::<[u8; 16]>::new();
+        let text_style = TextStyleBuilder::new(Font8x16).text_color(BinaryColor::On).build();
 
-        val_display(&mut buf, temp, "T");
+        let mut temp_buf = ArrayString::<[u8; 16]>::new();
+        let mut hum_buf = ArrayString::<[u8; 16]>::new();
 
-        Text::new(buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
+        val_display(&mut temp_buf, temp, "T", "C");
+
+        Text::new(temp_buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
+
+        val_display(&mut hum_buf, hum as i16, "H", "%");
+
+        Text::new(hum_buf.as_str(), Point::new(0, 20)).into_styled(text_style).draw(&mut disp).unwrap();
 
         disp.flush().unwrap();
 
@@ -145,8 +139,8 @@ fn main() -> ! {
     
 }
 
-pub fn val_display(buf: &mut ArrayString<[u8; 16]>, val: i16, msg: &str) {   
+pub fn val_display(buf: &mut ArrayString<[u8; 16]>, val: i16, msg: &str, unit: &str) {   
     
-    fmt::write(buf, format_args!("{}: {:04}", msg, val)).unwrap();    
+    fmt::write(buf, format_args!("{}: {:02}{}", msg, val, unit)).unwrap();    
     
 }

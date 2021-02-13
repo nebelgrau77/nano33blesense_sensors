@@ -1,8 +1,14 @@
-### HTS221 temperature read and displayed to SSD1306 OLED - WIP
+### HTS221 temperature and humidity read and displayed to SSD1306 OLED
 
 Ported to Arduino 33 BLESense board (https://store.arduino.cc/arduino-nano-33-ble-sense). 
 
-__Not working, hangs up on initializing the sensor. May need increasing the output drive on VDD_ENV pin.__
+According to the schematics (https://content.arduino.cc/assets/NANO33BLE_V2.0_sch.pdf) the HTS221 sensor is powered from the VDD_ENV line, which is connected to pin P0.22. Said pin has to be set HIGH. Pin P1.00 also has to be set HIGH, as it is connected to R_PULLUP for the SDA1/SCL1 signals. 
+
+_TO DO_:
+* refresh sensor readings with an interrupt or with RTIC, not in a busy loop
+
+
+![BLESense](HTS_Sense.jpg)
 
 #### HOW TO FLASH:
 
@@ -19,10 +25,10 @@ In order to flash code with nrfutil, Adafruit bootloader has to be flashed onto 
 
 * step 1: clone the repo from https://github.com/adafruit/Adafruit_nRF52_Bootloader
 and build with `make BOARD=arduino_nano_33_ble all`
-* step 2: flash using Black Magic Probe and GDB:
-`gdb`
-`target extended-remote /dev/ttyACM0`
-`monitor swdp_scan`
-`attach 1` (Nordic nRF52 M4)
-`load arduino_nano_33_ble_bootloader-0.4.0-2-g4ba802d_s140_6.1.1.hex`
+* step 2: flash using Black Magic Probe and GDB: \
+`gdb` \
+`target extended-remote /dev/ttyACM0` \
+`monitor swdp_scan` \
+`attach 1` (Nordic nRF52 M4) \
+`load arduino_nano_33_ble_bootloader-0.4.0-2-g4ba802d_s140_6.1.1.hex` \
 `kill`
