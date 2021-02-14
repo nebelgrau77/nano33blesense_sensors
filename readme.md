@@ -9,7 +9,7 @@ _TO DO_:
 * use the readings for something else than just plain value display
 
 
-![BLESense](HTS_Sense.jpg)
+![BLESense](BLESense_LSM9DS1.jpg)
 
 #### HOW TO FLASH:
 
