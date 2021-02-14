@@ -109,30 +109,40 @@ fn main() -> ! {
 
         // clean up the screen
         for m in 0..128 {
-            for n in 0..32 {
+            for n in 0..64 {
                 disp.set_pixel(m, n, 0);
             }
         }
-                
-        let (x,y,z) = lsm9ds1.read_gyro().unwrap(); // read gyroscope values
+        
+        let (a_x,a_y,a_z) = lsm9ds1.read_accel().unwrap(); // read gyroscope values
+        let (g_x,g_y,g_z) = lsm9ds1.read_gyro().unwrap(); // read gyroscope values
 
         let text_style = TextStyleBuilder::new(Font6x8).text_color(BinaryColor::On).build();
 
-        let mut x_buf = ArrayString::<[u8; 16]>::new(); 
-        let mut y_buf = ArrayString::<[u8; 16]>::new(); 
-        let mut z_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut ax_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut ay_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut az_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut gx_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut gy_buf = ArrayString::<[u8; 16]>::new(); 
+        let mut gz_buf = ArrayString::<[u8; 16]>::new(); 
 
-        val_display(&mut x_buf, x, "G_x");
-        val_display(&mut y_buf, y, "G_y");
-        val_display(&mut z_buf, z, "G_z");
+        val_display(&mut ax_buf, a_x, "A_x");
+        val_display(&mut ay_buf, a_y, "A_y");
+        val_display(&mut az_buf, a_z, "A_z");
+        val_display(&mut gx_buf, g_x, "G_x");
+        val_display(&mut gy_buf, g_y, "G_y");
+        val_display(&mut gz_buf, g_z, "G_z");
 
-        Text::new(x_buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
-        Text::new(y_buf.as_str(), Point::new(0, 9)).into_styled(text_style).draw(&mut disp).unwrap();
-        Text::new(z_buf.as_str(), Point::new(0, 18)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(ax_buf.as_str(), Point::new(0, 0)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(ay_buf.as_str(), Point::new(0, 9)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(az_buf.as_str(), Point::new(0, 18)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(gx_buf.as_str(), Point::new(0, 27)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(gy_buf.as_str(), Point::new(0, 36)).into_styled(text_style).draw(&mut disp).unwrap();
+        Text::new(gz_buf.as_str(), Point::new(0, 45)).into_styled(text_style).draw(&mut disp).unwrap();
 
         disp.flush().unwrap();
 
-        delay.delay_ms(100_u32);              
+        delay.delay_ms(250_u32);              
 
         if led.is_set_high().unwrap() {
             led.set_low().unwrap();
@@ -149,7 +159,7 @@ fn main() -> ! {
 
 pub fn val_display(buf: &mut ArrayString<[u8; 16]>, val: f32, msg: &str) {   
     
-    fmt::write(buf, format_args!("{}: {:.04}", msg, val)).unwrap();    
+    fmt::write(buf, format_args!("{}: {:.4}", msg, val)).unwrap();    
     
 }
 

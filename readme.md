@@ -1,4 +1,4 @@
-### HTS221 temperature and humidity read and displayed to SSD1306 OLED
+### LSM9DS1 accelerometer and gyroscope readings displayed to SSD1306 OLED
 
 Ported to Arduino 33 BLESense board (https://store.arduino.cc/arduino-nano-33-ble-sense). 
 
