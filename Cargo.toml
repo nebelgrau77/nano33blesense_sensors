@@ -1,0 +1,29 @@
+[package]
+name = "display"
+version = "0.1.0"
+authors = ["nebelgrau77"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.6.2"
+cortex-m-rt = "0.6.12"
+
+panic-halt = "~0.2"
+
+nrf52840-hal = {git = "https://github.com/nrf-rs/nrf-hal", branch = "master", features = ["rt"]}
+
+shared-bus = {version = "0.1.4", features = ["cortexm"]}
+
+ssd1306 = {version ="0.4", features=["graphics"]}
+embedded-graphics = "0.6.1"
+arrayvec = {version = "0.5.1", default-features = false}
+
+lsm9ds1 = "0.1.0"
+nb = "1"
+
+
+[dependencies.embedded-hal]
+version = "0.2.3"
+features = ["unproven"]
